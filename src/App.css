@@ -1,0 +1,566 @@
+/* Genel Stil */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+body {
+  background-color: #f5f7fa;
+  color: #333;
+}
+
+/* Dark Mod Desteği */
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: #1a1a1a;
+    color: #e0e0e0;
+  }
+}
+
+/* App Genel Yapısı */
+.App {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Header */
+.App-header {
+  width: 100%;
+  padding: 20px;
+  background: linear-gradient(90deg, #6a11cb 0%, #2575fc 100%);
+  text-align: center;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.App-header h1 {
+  color: #fff;
+  font-size: 2.5rem;
+  font-weight: 700;
+}
+
+/* Main */
+.App-main {
+  flex: 1;
+  max-width: 600px;
+  width: 100%;
+  padding: 30px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+/* Bölüm Başlıkları */
+.wallet-section h2,
+.buy-tokens-section h2,
+.contract-info-section h2 {
+  font-size: 1.8rem;
+  font-weight: 600;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+@media (prefers-color-scheme: dark) {
+  .wallet-section h2,
+  .buy-tokens-section h2,
+  .contract-info-section h2 {
+    color: #e0e0e0;
+  }
+}
+
+/* WalletConnectButton Stilleri */
+.wallet-connect-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.connect-buttons {
+  display: flex;
+  gap: 15px;
+}
+
+.connect-button {
+  padding: 12px 24px;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.2s;
+}
+
+.connect-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.connect-button:active {
+  transform: translateY(0);
+}
+
+.metamask-button {
+  background-color: #f6851b;
+  color: #fff;
+}
+
+.walletconnect-button {
+  background-color: #3b99fc;
+  color: #fff;
+}
+
+.connected-wallet {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  width: 100%;
+}
+
+@media (prefers-color-scheme: dark) {
+  .connected-wallet {
+    background-color: #2c2c2c;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  }
+}
+
+.connected-address,
+.connection-type {
+  font-size: 1rem;
+  margin-bottom: 10px;
+}
+
+.connected-address span,
+.connection-type span {
+  font-weight: 600;
+  color: #6a11cb;
+}
+
+@media (prefers-color-scheme: dark) {
+  .connected-address span,
+  .connection-type span {
+    color: #a78bfa;
+  }
+}
+
+.disconnect-button {
+  padding: 10px 20px;
+  font-size: 1rem;
+  font-weight: 600;
+  background-color: #ff4d4d;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.2s;
+}
+
+.disconnect-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(255, 77, 77, 0.3);
+}
+
+.disconnect-button:active {
+  transform: translateY(0);
+}
+
+/* BuyTokensForm Stilleri */
+.buy-tokens-form {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .buy-tokens-form {
+    background-color: #2c2c2c;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  }
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+@media (prefers-color-scheme: dark) {
+  .form-group label {
+    color: #e0e0e0;
+  }
+}
+
+.form-group input {
+  padding: 10px;
+  font-size: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.form-group input:focus {
+  border-color: #6a11cb;
+}
+
+@media (prefers-color-scheme: dark) {
+  .form-group input {
+    background-color: #3a3a3a;
+    border-color: #555;
+    color: #e0e0e0;
+  }
+
+  .form-group input:focus {
+    border-color: #a78bfa;
+  }
+}
+
+.buy-button {
+  padding: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  background: linear-gradient(90deg, #6a11cb 0%, #2575fc 100%);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.2s;
+}
+
+.buy-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.buy-button:active {
+  transform: translateY(0);
+}
+
+.buy-button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Contract Info Stilleri */
+.contract-info-section {
+  text-align: center;
+}
+
+.info-card {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .info-card {
+    background-color: #2c2c2c;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  }
+}
+
+.info-card p {
+  font-size: 1rem;
+}
+
+.info-card strong {
+  color: #6a11cb;
+}
+
+@media (prefers-color-scheme: dark) {
+  .info-card strong {
+    color: #a78bfa;
+  }
+}
+
+/* Kendi QR Kod Modal Stilleri */
+.custom-qr-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.custom-qr-modal-content {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  text-align: center;
+  position: relative;
+  max-width: 400px;
+  width: 90%;
+}
+
+@media (prefers-color-scheme: dark) {
+  .custom-qr-modal-content {
+    background-color: #1a1a1a;
+    color: #ffffff;
+  }
+}
+
+.custom-qr-modal-content h2 {
+  font-size: 1.5rem;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+@media (prefers-color-scheme: dark) {
+  .custom-qr-modal-content h2 {
+    color: #ffffff;
+  }
+}
+
+.custom-qr-modal-content p {
+  font-size: 1rem;
+  margin-bottom: 20px;
+  color: #666;
+}
+
+@media (prefers-color-scheme: dark) {
+  .custom-qr-modal-content p {
+    color: #cccccc;
+  }
+}
+
+.custom-qr-modal-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: #666;
+}
+
+@media (prefers-color-scheme: dark) {
+  .custom-qr-modal-close {
+    color: #cccccc;
+  }
+}
+
+.custom-qr-modal-close:hover {
+  color: #333;
+}
+
+@media (prefers-color-scheme: dark) {
+  .custom-qr-modal-close:hover {
+    color: #ffffff;
+  }
+}
+
+.custom-qr-code {
+  max-width: 100%;
+  border: 3px solid #ffffff;
+  border-radius: 8px;
+  padding: 10px;
+  background-color: #ffffff;
+}
+
+.App {
+  font-family: Arial, sans-serif;
+  text-align: center;
+  color: #333;
+}
+
+.App-header {
+  background-color: #007bff;
+  color: white;
+  padding: 20px;
+  font-size: 1.5rem;
+}
+
+.App-main {
+  margin: 20px;
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.wallet-section, .buy-tokens-section, .contract-info-section, .site-info {
+  margin-bottom: 40px;
+}
+
+.site-info {
+  text-align: left;
+  background-color: #f9f9f9;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.site-info h1, .site-info h2, .site-info h3 {
+  color: #007bff;
+}
+
+.site-info ul {
+  list-style-type: disc;
+  margin-left: 20px;
+  margin-bottom: 20px;
+}
+
+.social-links {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 10px;
+  list-style-type: none;
+  padding: 0;
+}
+
+.social-links li {
+  display: flex;
+  align-items: center;
+  background-color: #ffffff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease-in-out;
+}
+
+.social-links li:hover {
+  background-color: #007bff;
+  color: white;
+  border-color: #007bff;
+  transform: scale(1.02);
+}
+
+.social-links i {
+  margin-right: 10px;
+  font-size: 1.2rem;
+}
+
+.social-links a {
+  text-decoration: none;
+  color: inherit;
+  font-weight: bold;
+  flex: 1;
+}
+
+.social-links a:hover {
+  text-decoration: underline;
+}
+.tokenomics-image {
+  max-width: 600px; /* İstediğin maksimum genişlik */
+  width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+.whitepaper-section {
+  text-align: center;
+  margin-bottom: 40px;  /* İstediğiniz boşluğu ayarlayabilirsiniz */
+  padding: 20px;
+  background-color: #f1f1f1;
+  border-radius: 10px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+}
+
+.whitepaper-section h2 {
+  color: #007bff;
+}
+
+.whitepaper-section a {
+  color: #007bff;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.whitepaper-section a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+  .App-main {
+    padding: 15px 10px;
+    max-width: 100%;
+  }
+  
+  .wallet-section,
+  .buy-tokens-section,
+  .contract-info-section,
+  .site-info,
+  .whitepaper-section {
+    margin-bottom: 20px;
+  }
+  
+  .App-header h1 {
+    font-size: 1.8rem;
+  }
+  
+  .whitepaper-section {
+    padding: 15px;
+  }
+  
+  .social-links {
+    grid-template-columns: 1fr; /* Küçük ekranlarda tek kolonlu olacak */
+  }
+}
+
+/* Butonları kapsayan container, butonlar daraldığında satır kayması yapar */
+.connect-buttons {
+  display: flex;
+  flex-wrap: wrap;           /* Dar ekranlarda alt satırlara taşmalarını sağlar */
+  justify-content: center;   /* Butonları ortalar */
+  gap: 15px;                 /* Butonlar arasında uygun boşluk bırakır */
+}
+
+/* Butonlar için responsive boyutlandırma */
+.connect-button {
+  flex: 1;                   /* Butonların konteyner içinde eşit alan kaplamasını sağlar */
+  min-width: 120px;          /* Butonların çok küçük olmasını engeller */
+  max-width: 200px;          /* Butonların çok geniş olmasını engeller */
+  padding: 12px 24px;
+  font-size: 1rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.2s;
+}
+
+/* Küçük ekranlar için ek uyum sağlayan Media Query */
+@media (max-width: 480px) {
+  .connect-button {
+    font-size: 0.85rem;
+    padding: 10px 20px;
+  }
+  
+  .connect-buttons {
+    gap: 10px;
+  }
+}
+
+.contract-address {
+  font-family: monospace; /* Kontrat adresleri için sabit genişlikli yazı tipi önerilir */
+  overflow-wrap: break-word; /* Uzun adreslerin satır içinde kırılmasını sağlar */
+  word-break: break-all;      /* Gerektiğinde kelime sınırlarında da kırılma yapar */
+}
+
