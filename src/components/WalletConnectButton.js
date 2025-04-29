@@ -1,331 +1,440 @@
-import React, { useState, useEffect } from 'react';
-import { createWalletKit } from './WalletKitUtil';
-import { config } from '../config';
-import { buildApprovedNamespaces, getSdkError } from '@walletconnect/utils';
-import { ethers } from 'ethers';
-import './styles.css';
+import React, { useState, useEffect } from "react";
+import { Core } from "@walletconnect/core";
+import {
+  buildApprovedNamespaces,
+  getSdkError,
+  populateAuthPayload,
+  buildAuthObject,
+} from "@walletconnect/utils";
+import { WalletKit } from "@reown/walletkit";
+import { formatJsonRpcResult } from "@walletconnect/jsonrpc-utils";
+import QRCode from "qrcode";
+import { ethers } from "ethers";
+import "./styles.css";
 
-const WalletConnectButton = ({ setProvider, setAccount }) => {
-  const [account, setLocalAccount] = useState(null);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [qrCodeUrl, setQrCodeUrl] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
-  const [showWalletPopup, setShowWalletPopup] = useState(false);
+// WalletKit'i hemen başlat (Deep Link için)
+const core = new Core({
+  projectId: process.env.REACT_APP_PROJECT_ID, // REACT_APP_PROJECT_ID kullanıyoruz
+});
 
-  const isMobileDevice = () => /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+let walletKitInstance = null;
+let isInitializing = false; // Başlatma durumunu takip et
 
-  const connectWithWalletConnect = async () => {
-    setIsConnecting(true);
-    setShowWalletPopup(true);
-    setErrorMessage('');
+async function initializeWalletKitGlobal(setErrorCallback) {
+  if (isInitializing || walletKitInstance) {
+    console.log("WalletKit already initialized or initializing");
+    return;
+  }
 
-    let walletkit;
-    try {
-      console.log('Initializing WalletKit...');
-      walletkit = await createWalletKit();
-      console.log('WalletKit initialized:', walletkit);
+  isInitializing = true;
+  try {
+    walletKitInstance = await WalletKit.init({
+      core,
+      metadata: {
+        name: "SoliumCoin",
+        description: "SoliumCoin DApp",
+        url: "https://soliumcoin.com",
+        icons: ["https://soliumcoin.com/favicon.ico"],
+      },
+    });
+    console.log("WalletKit globally initialized");
 
-      // Eski eşleştirmeleri temizle
-      console.log('Cleaning up old pairings...');
-      const pairings = await walletkit.engine.signClient.core.pairing.getPairings();
-      console.log('Found pairings:', pairings);
-      for (const pairing of pairings) {
-        await walletkit.engine.signClient.core.pairing.disconnect({ topic: pairing.topic });
-        console.log('Disconnected pairing:', pairing.topic);
-      }
-
-      // Eski oturumları temizle
-      console.log('Cleaning up old sessions...');
-      const activeSessions = walletkit.getActiveSessions();
-      console.log('Active sessions:', activeSessions);
-      if (activeSessions && Object.keys(activeSessions).length > 0) {
-        for (const session of Object.values(activeSessions)) {
-          await walletkit.disconnectSession({
-            topic: session.topic,
-            reason: getSdkError('USER_DISCONNECTED'),
-          });
-          console.log('Disconnected session:', session.topic);
-        }
-      }
-
-      // Ek olay dinleyicileri
-      console.log('Setting up all event listeners...');
-      walletkit.engine.signClient.events.on('session_event', (event) => {
-        console.log('General session event:', event);
-      });
-      walletkit.engine.signClient.events.on('session_ping', (event) => {
-        console.log('Session ping event:', event);
-      });
-      walletkit.engine.signClient.events.on('session_update', (event) => {
-        console.log('Session update event:', event);
-      });
-
-      // Oturum önerisi dinleyici
-      walletkit.on('session_proposal', async ({ id, params }) => {
-        console.log('Session proposal received:', params);
+    // Eski pairing'leri temizle
+    await walletKitInstance.core.pairing
+      .getPairings()
+      .forEach(async (pairing) => {
         try {
-          const approvedNamespaces = buildApprovedNamespaces({
-            proposal: params,
-            supportedNamespaces: {
-              eip155: {
-                chains: [`eip155:${config.chainId}`],
-                methods: [
-                  'eth_accounts',
-                  'eth_requestAccounts',
-                  'eth_sendRawTransaction',
-                  'eth_sign',
-                  'eth_signTransaction',
-                  'eth_sendTransaction',
-                  'personal_sign',
-                  'wallet_switchEthereumChain',
-                  'wallet_addEthereumChain',
-                ],
-                events: ['chainChanged', 'accountsChanged'],
-                accounts: [],
-              },
-            },
-          });
-
-          const session = await walletkit.approveSession({
-            id,
-            namespaces: approvedNamespaces,
-          });
-          console.log('Session approved:', session);
-
-          const accounts = await walletkit.engine.signClient.request({
-            topic: session.topic,
-            chainId: `eip155:${config.chainId}`,
-            request: { method: 'eth_accounts', params: [] },
-          });
-          console.log('Connected accounts:', accounts);
-
-          const provider = new ethers.providers.Web3Provider(walletkit);
-          setLocalAccount(accounts[0]);
-          setProvider(provider);
-          setAccount(accounts[0]);
-          setShowWalletPopup(false);
-          setQrCodeUrl('');
-          setErrorMessage('');
-
-          localStorage.setItem(
-            'walletConnection',
-            JSON.stringify({
-              account: accounts[0],
-            })
-          );
-        } catch (error) {
-          console.error('Session proposal error:', error);
-          await walletkit.rejectSession({
-            id,
-            reason: getSdkError('USER_REJECTED'),
-          });
-          setErrorMessage(`Session proposal error: ${error.message}`);
-          setShowWalletPopup(false);
-          setIsConnecting(false);
+          await walletKitInstance.core.pairing.disconnect({ topic: pairing.topic });
+          console.log(`Cleared old pairing: ${pairing.topic}`);
+        } catch (err) {
+          console.error(`Failed to clear pairing ${pairing.topic}:`, err);
         }
       });
+  } catch (err) {
+    console.error("Global WalletKit initialization failed:", err);
+    setErrorCallback(`WalletKit başlatılamadı: ${err.message}`);
+  } finally {
+    isInitializing = false;
+  }
+}
 
-      // Oturum hata ve olay dinleyicileri
-      walletkit.on('session_error', (error) => {
-        console.error('Session error:', error);
-        setErrorMessage(`Session error: ${error.message}`);
-      });
-      walletkit.on('session_delete', () => {
-        console.log('Session deleted');
-        setErrorMessage('Session deleted by wallet');
-        setLocalAccount(null);
-        setProvider(null);
-        setAccount(null);
-      });
-      walletkit.on('session_expire', () => {
-        console.log('Session expired');
-        setErrorMessage('Session expired');
-      });
+const WalletConnectButton = () => {
+  const [walletKit, setWalletKit] = useState(null);
+  const [qrCodeUrl, setQrCodeUrl] = useState("");
+  const [session, setSession] = useState(null);
+  const [error, setError] = useState("");
+  const [uri, setUri] = useState("");
+  const [isLoading, setIsLoading] = useState(true); // Başlatma durumunu takip et
 
-      // Oturum isteği dinleyici
-      walletkit.on('session_request', async (event) => {
-        const { topic, params, id } = event;
-        const { request } = params;
-        try {
-          if (request.method === 'personal_sign') {
-            const message = ethers.utils.toUtf8String(request.params[0]);
-            const provider = new ethers.providers.Web3Provider(walletkit);
-            const signer = provider.getSigner();
-            const signature = await signer.signMessage(message);
-            await walletkit.respondSessionRequest({
-              topic,
-              response: { id, result: signature, jsonrpc: '2.0' },
-            });
-          } else if (request.method === 'eth_signTransaction') {
-            const provider = new ethers.providers.Web3Provider(walletkit);
-            const signer = provider.getSigner();
-            const signature = await signer.signTransaction(request.params[0]);
-            await walletkit.respondSessionRequest({
-              topic,
-              response: { id, result: signature, jsonrpc: '2.0' },
-            });
-          } else {
-            await walletkit.respondSessionRequest({
-              topic,
-              response: {
+  // WalletKit'i bileşen seviyesinde güncelle ve olay dinleyicilerini ekle
+  useEffect(() => {
+    async function setupWalletKit() {
+      try {
+        await initializeWalletKitGlobal(setError);
+        if (walletKitInstance) {
+          setWalletKit(walletKitInstance);
+          setIsLoading(false);
+          console.log("walletKit state updated:", walletKitInstance);
+
+          // Pairing expiry olayını dinle
+          core.pairing.events.on("pairing_expire", (event) => {
+            console.log("Pairing expired:", event);
+            setError("Bağlantı süresi doldu, lütfen tekrar deneyin.");
+            setQrCodeUrl("");
+            setUri("");
+          });
+
+          // Session proposal olayını dinle (Dinamik yaklaşım)
+          walletKitInstance.on("session_proposal", async ({ id, params }) => {
+            try {
+              console.log("Session proposal params:", params);
+
+              const { requiredNamespaces, optionalNamespaces } = params;
+              const supportedChains = ["eip155:56"];
+              const supportedMethods = [
+                "eth_accounts",
+                "eth_requestAccounts",
+                "eth_sendTransaction",
+                "personal_sign",
+                "wallet_switchEthereumChain",
+                "wallet_addEthereumChain",
+              ];
+              const supportedEvents = [
+                "chainChanged",
+                "accountsChanged",
+                "disconnect",
+              ];
+
+              const approvedNamespaces = {
+                eip155: {
+                  chains: [],
+                  methods: supportedMethods,
+                  events: supportedEvents,
+                  accounts: [],
+                },
+              };
+
+              if (requiredNamespaces.eip155) {
+                const proposedChains = requiredNamespaces.eip155.chains || [];
+                approvedNamespaces.eip155.chains = proposedChains.filter((chain) =>
+                  supportedChains.includes(chain)
+                );
+
+                if (approvedNamespaces.eip155.chains.length === 0) {
+                  throw new Error("Hiçbir desteklenen zincir bulunamadı");
+                }
+
+                const proposedMethods = requiredNamespaces.eip155.methods || [];
+                approvedNamespaces.eip155.methods = proposedMethods.filter(
+                  (method) => supportedMethods.includes(method)
+                );
+
+                const proposedEvents = requiredNamespaces.eip155.events || [];
+                approvedNamespaces.eip155.events = proposedEvents.filter((event) =>
+                  supportedEvents.includes(event)
+                );
+
+                approvedNamespaces.eip155.accounts =
+                  approvedNamespaces.eip155.chains.map(
+                    (chain) =>
+                      `${chain}:0xab16a96d359ec26a11e2c2b3d8f8b8942d5bfcdb`
+                  );
+              }
+
+              console.log("Approved namespaces:", approvedNamespaces);
+
+              const newSession = await walletKitInstance.approveSession({
                 id,
-                jsonrpc: '2.0',
-                error: { code: 5000, message: 'Unsupported method' },
-              },
-            });
-          }
-        } catch (error) {
-          console.error('Session request error:', error);
-          await walletkit.respondSessionRequest({
-            topic,
-            response: {
-              id,
-              jsonrpc: '2.0',
-              error: { code: 5000, message: `Request failed: ${error.message}` },
-            },
+                namespaces: approvedNamespaces,
+              });
+              console.log("Session approved:", newSession);
+              setSession(newSession);
+              setQrCodeUrl("");
+            } catch (err) {
+              console.error("Session proposal error:", err);
+              setError("Oturum önerisi başarısız: " + err.message);
+              await walletKitInstance.rejectSession({
+                id,
+                reason: getSdkError("USER_REJECTED"),
+              });
+            }
+          });
+
+          // Session authenticate olayını dinle (One-click Auth)
+          walletKitInstance.on("session_authenticate", async (payload) => {
+            try {
+              console.log("Session authenticate payload:", payload);
+
+              const { verifyContext } = payload;
+              const validation = verifyContext.verified.validation;
+              const origin = verifyContext.verified.origin;
+              const isScam = verifyContext.verified.isScam;
+
+              console.log("Verify API results:", { validation, origin, isScam });
+
+              if (isScam) {
+                const proceed = window.confirm(
+                  `UYARI: Bu talep kötü niyetli bir domain (${origin}) tarafından gönderildi. Devam etmek riskli olabilir. Devam etmek istiyor musunuz?`
+                );
+                if (!proceed) {
+                  throw new Error("Kullanıcı kötü niyetli domain nedeniyle talebi reddetti");
+                }
+              }
+
+              switch (validation) {
+                case "VALID":
+                  break;
+                case "INVALID":
+                  const invalidProceed = window.confirm(
+                    `UYARI: Talep, beklenen domain ile eşleşmiyor (Origin: ${origin}). Devam etmek riskli olabilir. Devam etmek istiyor musunuz?`
+                  );
+                  if (!invalidProceed) {
+                    throw new Error("Kullanıcı domain eşleşmesi hatası nedeniyle talebi reddetti");
+                  }
+                  break;
+                case "UNKNOWN":
+                  const unknownProceed = window.confirm(
+                    `UYARI: Talep doğrulanamadı (Origin: ${origin}). Devam etmek riskli olabilir. Devam etmek istiyor musunuz?`
+                  );
+                  if (!unknownProceed) {
+                    throw new Error("Kullanıcı doğrulanamayan domain nedeniyle talebi reddetti");
+                  }
+                  break;
+              }
+
+              const supportedChains = ["eip155:56"];
+              const supportedMethods = [
+                "eth_accounts",
+                "eth_requestAccounts",
+                "eth_sendTransaction",
+                "personal_sign",
+              ];
+
+              const authPayload = populateAuthPayload({
+                authPayload: payload.params.authPayload,
+                chains: supportedChains,
+                methods: supportedMethods,
+              });
+
+              const wallet = new ethers.Wallet("YOUR_PRIVATE_KEY");
+              const iss = `eip155:56:${wallet.address}`;
+
+              const message = walletKitInstance.formatAuthMessage({
+                request: authPayload,
+                iss,
+              });
+
+              console.log("Authentication message:", message);
+              const userApproved = window.confirm(
+                `Lütfen bu mesajı onaylayın:\n${message}`
+              );
+              if (!userApproved) {
+                throw new Error("Kullanıcı mesajı onaylamadı");
+              }
+
+              const signature = await wallet.signMessage(message);
+
+              const auth = buildAuthObject(
+                authPayload,
+                {
+                  t: "eip191",
+                  s: signature,
+                },
+                iss
+              );
+
+              await walletKitInstance.approveSessionAuthenticate({
+                id: payload.id,
+                auths: [auth],
+              });
+
+              console.log("Session authenticate approved:", auth);
+              setSession({ topic: payload.id, namespaces: authPayload });
+              setQrCodeUrl("");
+            } catch (err) {
+              console.error("Session authenticate error:", err);
+              setError("Kimlik doğrulama başarısız: " + err.message);
+              await walletKitInstance.rejectSessionAuthenticate({
+                id: payload.id,
+                reason: getSdkError("USER_REJECTED"),
+              });
+            }
+          });
+
+          // Auth request olayını dinle (Verify API ile doğrulama)
+          walletKitInstance.on("auth_request", async (authRequest) => {
+            try {
+              console.log("Auth request payload:", authRequest);
+
+              const { verifyContext } = authRequest;
+              const validation = verifyContext.verified.validation;
+              const origin = verifyContext.verified.origin;
+              const isScam = verifyContext.verified.isScam;
+
+              console.log("Verify API results:", { validation, origin, isScam });
+
+              if (isScam) {
+                const proceed = window.confirm(
+                  `UYARI: Bu talep kötü niyetli bir domain (${origin}) tarafından gönderildi. Devam etmek riskli olabilir. Devam etmek istiyor musunuz?`
+                );
+                if (!proceed) {
+                  throw new Error("Kullanıcı kötü niyetli domain nedeniyle talebi reddetti");
+                }
+              }
+
+              switch (validation) {
+                case "VALID":
+                  break;
+                case "INVALID":
+                  const invalidProceed = window.confirm(
+                    `UYARI: Talep, beklenen domain ile eşleşmiyor (Origin: ${origin}). Devam etmek riskli olabilir. Devam etmek istiyor musunuz?`
+                  );
+                  if (!invalidProceed) {
+                    throw new Error("Kullanıcı domain eşleşmesi hatası nedeniyle talebi reddetti");
+                  }
+                  break;
+                case "UNKNOWN":
+                  const unknownProceed = window.confirm(
+                    `UYARI: Talep doğrulanamadı (Origin: ${origin}). Devam etmek riskli olabilir. Devam etmek istiyor musunuz?`
+                  );
+                  if (!unknownProceed) {
+                    throw new Error("Kullanıcı doğrulanamayan domain nedeniyle talebi reddetti");
+                  }
+                  break;
+              }
+
+              setError("Auth request alındı, ancak işleme mantığı eklenmedi.");
+            } catch (err) {
+              console.error("Auth request error:", err);
+              setError("Kimlik doğrulama talebi başarısız: " + err.message);
+            }
+          });
+
+          // Session request olayını dinle
+          walletKitInstance.on("session_request", async (event) => {
+            const { topic, params, id } = event;
+            const { request } = params;
+
+            try {
+              console.log("Session request:", event);
+              const wallet = new ethers.Wallet("YOUR_PRIVATE_KEY");
+              let response;
+
+              switch (request.method) {
+                case "personal_sign": {
+                  const message = ethers.utils.toUtf8String(request.params[0]);
+                  const signedMessage = await wallet.signMessage(message);
+                  response = formatJsonRpcResult(id, signedMessage);
+                  break;
+                }
+                case "eth_sendTransaction": {
+                  const tx = request.params[0];
+                  const signedTx = await wallet.signTransaction(tx);
+                  response = formatJsonRpcResult(id, signedTx);
+                  break;
+                }
+                default:
+                  throw new Error(`Desteklenmeyen yöntem: ${request.method}`);
+              }
+
+              await walletKitInstance.respondSessionRequest({ topic, response });
+            } catch (err) {
+              const errorResponse = {
+                id,
+                jsonrpc: "2.0",
+                error: {
+                  code: 5000,
+                  message: err.message,
+                },
+              };
+              await walletKitInstance.respondSessionRequest({
+                topic,
+                response: errorResponse,
+              });
+            }
           });
         }
-      });
-
-      // Yeni eşleştirme oluştur
-      console.log('Creating new pairing...');
-      const pairing = await walletkit.engine.signClient.core.pairing.create();
-      const uri = pairing.uri;
-
-      if (!uri || typeof uri !== 'string' || !uri.startsWith('wc:')) {
-        throw new Error('Invalid pairing URI');
+      } catch (err) {
+        console.error("Setup WalletKit failed:", err);
+        setError("WalletKit kurulumu başarısız: " + err.message);
+        setIsLoading(false);
       }
-      console.log('Pairing created, QR URI:', uri);
-
-      // Mobil cihaz için URI’yi doğrudan ayarla
-      setQrCodeUrl(uri);
-
-      // Oturum onayını bekle
-      console.log('Waiting for session approval via session_proposal...');
-    } catch (error) {
-      console.error('WalletConnect error:', error);
-      setErrorMessage(`WalletConnect error: ${error.message || 'Unknown error'}`);
-      setQrCodeUrl('');
-      setShowWalletPopup(false);
-      setIsConnecting(false);
     }
-  };
 
-  const handleDisconnect = async () => {
-    let walletkit;
-    try {
-      walletkit = await createWalletKit();
-      const activeSessions = walletkit.getActiveSessions();
-      if (activeSessions && Object.keys(activeSessions).length > 0) {
-        for (const session of Object.values(activeSessions)) {
-          await walletkit.disconnectSession({
-            topic: session.topic,
-            reason: getSdkError('USER_DISCONNECTED'),
-          });
-          console.log('Disconnected session:', session.topic);
-        }
-      }
-      localStorage.removeItem('walletConnection');
-      setLocalAccount(null);
-      setProvider(null);
-      setAccount(null);
-      setErrorMessage('');
-      setQrCodeUrl('');
-      setShowWalletPopup(false);
-    } catch (error) {
-      console.error('Disconnect error:', error);
-      setErrorMessage(`Disconnect error: ${error.message || 'Unknown error'}`);
-    }
-  };
+    setupWalletKit();
+  }, []);
 
-  const handleMobileConnect = (walletType) => {
-    if (!qrCodeUrl || !qrCodeUrl.startsWith('wc:')) {
-      setErrorMessage('Invalid or missing URI. Please try again.');
+  // WalletConnect ile bağlanma
+  const connectWallet = async () => {
+    if (!walletKit) {
+      setError("WalletKit başlatılmadı");
       return;
     }
 
-    const deepLinks = {
-      metamask: `https://metamask.app.link/wc?uri=${encodeURIComponent(qrCodeUrl)}`,
-      trust: `https://link.trustwallet.com/wc?uri=${encodeURIComponent(qrCodeUrl)}`,
-    };
-    const selectedLink = deepLinks[walletType];
-    if (selectedLink) {
-      console.log('Redirecting to:', selectedLink);
-      window.location.href = selectedLink;
-    } else {
-      setErrorMessage('No deeplink found for selected wallet.');
+    try {
+      const { uri: newUri } = await walletKit.core.pairing.create();
+      setUri(newUri);
+
+      const qrCode = await QRCode.toDataURL(newUri);
+      setQrCodeUrl(qrCode);
+
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(
+          () => reject(new Error("Bağlantı zaman aşımına uğradı")),
+          30000
+        )
+      );
+      await Promise.race([walletKit.pair({ uri: newUri }), timeoutPromise]);
+    } catch (err) {
+      console.error("Pairing error:", err);
+      setError(`Cüzdan bağlantısı başarısız: ${err.message}`);
+      setQrCodeUrl("");
     }
   };
 
-  useEffect(() => {
-    const connectionData = localStorage.getItem('walletConnection');
-    if (connectionData) {
-      connectWithWalletConnect();
+  // Oturumu sonlandır
+  const disconnectWallet = async () => {
+    if (!walletKit || !session) return;
+
+    try {
+      await walletKit.disconnectSession({
+        topic: session.topic,
+        reason: getSdkError("USER_DISCONNECTED"),
+      });
+      setSession(null);
+      setQrCodeUrl("");
+      setUri("");
+    } catch (err) {
+      setError("Bağlantı kesme başarısız: " + err.message);
     }
-  }, [setProvider, setAccount]);
+  };
+
+  // number 0 is not iterable hatasını önlemek için güvenli veri kontrolü
+  const safeAccounts = Array.isArray(session?.namespaces?.eip155?.accounts)
+    ? session.namespaces.eip155.accounts
+    : [];
 
   return (
-    <div className="wallet-connect-container">
-      {errorMessage && <div style={{ color: 'red', marginBottom: '10px' }}>{errorMessage}</div>}
-      {account ? (
-        <div className="connected-wallet">
-          <p>
-            <strong>Connected Address:</strong> {account.slice(0, 6)}...{account.slice(-4)}
-          </p>
-          <button className="disconnect-button" onClick={handleDisconnect}>
-            Disconnect
+    <div className="container">
+      <h1>WalletConnect Demo</h1>
+      {error && <p style={{ color: "red" }}>{error}</p>}
+      {!session ? (
+        <div>
+          <button onClick={connectWallet} disabled={!walletKit || isLoading}>
+            Cüzdanı Bağla
           </button>
+          {qrCodeUrl && (
+            <div>
+              <h3>QR Kodu Tara</h3>
+              <img src={qrCodeUrl} alt="QR Code" />
+            </div>
+          )}
         </div>
       ) : (
-        <div className="connect-buttons">
-          <button
-            className="connect-button walletconnect-button"
-            onClick={connectWithWalletConnect}
-            disabled={isConnecting}
-          >
-            {isConnecting ? 'Connecting...' : 'Connect with WalletConnect'}
-          </button>
-        </div>
-      )}
-      {showWalletPopup && (
-        <div className="custom-wallet-modal">
-          <div className="custom-wallet-modal-content">
-            <button
-              className="custom-wallet-modal-close"
-              onClick={() => {
-                setShowWalletPopup(false);
-                setQrCodeUrl('');
-              }}
-            >
-              ✕
-            </button>
-            <h2>Connect with Wallet</h2>
-            <div className="wallet-options">
-              {isMobileDevice() ? (
-                <div className="button-section">
-                  <button
-                    className="mobile-button"
-                    onClick={() => handleMobileConnect('metamask')}
-                  >
-                    MetaMask (Mobile)
-                  </button>
-                  <button
-                    className="mobile-button"
-                    onClick={() => handleMobileConnect('trust')}
-                  >
-                    Trust Wallet (Mobile)
-                  </button>
-                </div>
-              ) : (
-                <div className="qr-code-section">
-                  <h3>Scan QR Code</h3>
-                  {qrCodeUrl && (
-                    <img src={qrCodeUrl} alt="WalletConnect QR Code" className="custom-qr-code" />
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
+        <div>
+          <p>Oturum bağlandı: {session.topic}</p>
+          <p>Hesaplar: {safeAccounts.join(", ") || "Hesap yok"}</p>
+          <button onClick={disconnectWallet}>Bağlantıyı Kes</button>
         </div>
       )}
     </div>
