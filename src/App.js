@@ -1,23 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import WalletConnectButton from './components/WalletConnectButton';
-import { createWalletKit } from './components/WalletKitUtil';
 import BuyTokensForm from './components/BuyTokensForm';
-import TestWalletConnect from './components/TestWalletConnect'; // Doğru syntax
 import { getContractInfo } from './contract';
 import './App.css';
 import tokenomicsImage from './tokenomics.webp';
 import whitepaperPdf from './Solium_Whitepaper.pdf';
+import CountdownTimer from "./components/CountdownTimer";
 
 function App() {
   const [provider, setProvider] = useState(null);
   const [account, setAccount] = useState(null);
   const [contractInfo, setContractInfo] = useState({ totalBNB: 0, remainingTokens: 0 });
+
+  // Initial state: localStorage'da "disclaimerAccepted" varsa false, yoksa true.
   const [showDisclaimer, setShowDisclaimer] = useState(() => {
     return localStorage.getItem('disclaimerAccepted') ? false : true;
   });
 
-  console.log('REACT_APP_TEST_VARIABLE:', process.env.REACT_APP_TEST_VARIABLE || 'Environment variable not loaded');
+  // Yeni: Sunucu zamanını saklamak için state (backend API'den gelecek veri)
+  const [serverTime, setServerTime] = useState(null);
 
+  // Mevcut: Provider üzerinden kontrat bilgilerini çekmek için useEffect.
   useEffect(() => {
     const fetchInfo = async () => {
       if (provider) {
@@ -32,6 +35,18 @@ function App() {
     fetchInfo();
   }, [provider]);
 
+  // Backend'deki /api/current-time endpoint'inden sunucu zamanını çekmek için useEffect.
+  useEffect(() => {
+    fetch('https://soliumcoin.com:8443/api/current-time')
+      .then(response => response.json())
+      .then(data => {
+        console.log('Server Time:', data);
+        setServerTime(data.now || data);
+      })
+      .catch(err => console.error(err));
+  }, []);
+
+  // Disclaimer pop-up'ını kapatıp, localStorage'a kaydeden fonksiyon.
   const handleDisclaimerAccept = () => {
     setShowDisclaimer(false);
     localStorage.setItem('disclaimerAccepted', 'true');
@@ -88,14 +103,27 @@ function App() {
       )}
 
       <header className="App-header">
-        <h1>solium coin presale and airdrop</h1>
+        <h1>Solium Coin Presale and Airdrop</h1>
       </header>
+
       <main className="App-main">
+        {/* Geri sayım sayacını buraya ekleyebilirsiniz */}
+        <section className="countdown">
+          <CountdownTimer />
+        </section>
+
+        {/* Yeni: Sunucu bilgisini gösteren bölüm */}
+        <section className="server-info">
+          <h2>Server Info</h2>
+          {serverTime ? (
+            <p>Server Time: {new Date(serverTime).toLocaleString()}</p>
+          ) : (
+            <p>Server Time Loading...</p>
+          )}
+        </section>
         <section className="wallet-section">
           <h2>wallet connect</h2>
           <WalletConnectButton setProvider={setProvider} setAccount={setAccount} />
-          <h2>test wallet connect</h2>
-          <TestWalletConnect /> {/* Test bileşenini buraya ekledik */}
         </section>
         <section className="buy-tokens-section">
           <h2>solium buy</h2>
@@ -115,7 +143,9 @@ function App() {
         <section className="site-info">
           <h1>Welcome to Solium – The People's Coin</h1>
           <p>Solium (SLM) isn't just a token. It's a revolution born from transparency, fairness, and the spirit of Web3.</p>
-          <p>In a world dominated by VC-funded whales and centralized control, <strong>Solium puts the power back in your hands</strong>.</p>
+          <p>
+            In a world dominated by VC-funded whales and centralized control, <strong>Solium puts the power back in your hands</strong>.
+          </p>
           <h2>Fair. Decentralized. Unstoppable.</h2>
           <ul>
             <li><strong>Total Supply:</strong> 100,000,000 SLM</li>
