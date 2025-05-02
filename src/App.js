@@ -1,26 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import WalletConnectButton from './components/WalletConnectButton';
-import BuyTokensForm from './components/BuyTokensForm';
-import { getContractInfo } from './contract';
-import './App.css';
-import tokenomicsImage from './tokenomics.webp';
-import whitepaperPdf from './Solium_Whitepaper.pdf';
+import React, { useState, useEffect } from "react";
+import { FaBitcoin, FaEthereum } from "react-icons/fa";
+import { SiBinance } from "react-icons/si";
+import WalletConnectButton from "./components/WalletConnectButton";
+import BuyTokensForm from "./components/BuyTokensForm";
+import { getContractInfo } from "./contract";
+import "./App.css";
+import tokenomicsImage from "./tokenomics.webp";
+import whitepaperPdf from "./Solium_Whitepaper.pdf";
 import CountdownTimer from "./components/CountdownTimer";
 
 function App() {
   const [provider, setProvider] = useState(null);
   const [account, setAccount] = useState(null);
   const [contractInfo, setContractInfo] = useState({ totalBNB: 0, remainingTokens: 0 });
-
-  // Initial state: localStorage'da "disclaimerAccepted" varsa false, yoksa true.
   const [showDisclaimer, setShowDisclaimer] = useState(() => {
-    return localStorage.getItem('disclaimerAccepted') ? false : true;
+    return localStorage.getItem("disclaimerAccepted") ? false : true;
   });
-
-  // Yeni: Sunucu zamanını saklamak için state (backend API'den gelecek veri)
   const [serverTime, setServerTime] = useState(null);
 
-  // Mevcut: Provider üzerinden kontrat bilgilerini çekmek için useEffect.
   useEffect(() => {
     const fetchInfo = async () => {
       if (provider) {
@@ -35,25 +32,28 @@ function App() {
     fetchInfo();
   }, [provider]);
 
-  // Backend'deki /api/current-time endpoint'inden sunucu zamanını çekmek için useEffect.
   useEffect(() => {
-    fetch('https://soliumcoin.com:8443/api/current-time')
-      .then(response => response.json())
-      .then(data => {
-        console.log('Server Time:', data);
+    fetch("https://soliumcoin.com:8443/api/current-time")
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("Server Time:", data);
         setServerTime(data.now || data);
       })
-      .catch(err => console.error(err));
+      .catch((err) => console.error(err));
   }, []);
 
-  // Disclaimer pop-up'ını kapatıp, localStorage'a kaydeden fonksiyon.
   const handleDisclaimerAccept = () => {
     setShowDisclaimer(false);
-    localStorage.setItem('disclaimerAccepted', 'true');
+    localStorage.setItem("disclaimerAccepted", "true");
   };
 
   return (
     <div className="App">
+      <div className="crypto-animations">
+        <FaBitcoin className="crypto-float bitcoin" style={{ top: '10%', left: '5%', fontSize: '4rem' }} />
+        <FaEthereum className="crypto-float ethereum" style={{ top: '30%', right: '7%', fontSize: '3.5rem' }} />
+        <SiBinance className="crypto-float bnb" style={{ bottom: '20%', left: '15%', fontSize: '4.2rem' }} />
+      </div>
       {showDisclaimer && (
         <div
           style={{
@@ -66,7 +66,7 @@ function App() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            zIndex: 9999
+            zIndex: 9999,
           }}
         >
           <div
@@ -76,12 +76,14 @@ function App() {
               maxWidth: "600px",
               borderRadius: "10px",
               textAlign: "center",
-              boxShadow: "0 0 20px rgba(0,0,0,0.3)"
+              boxShadow: "0 0 20px rgba(0,0,0,0.3)",
             }}
           >
             <h2>⚠️ Legal Notice</h2>
             <p style={{ fontSize: "16px", marginBottom: "25px" }}>
-              Participation in the Solium Coin presale is <strong>not permitted</strong> for residents of the United States, Canada, or any country subject to international sanctions (including Iran, Cuba, North Korea, Syria, Venezuela, and others).<br /><br />
+              Participation in the Solium Coin presale is <strong>not permitted</strong> for residents of the United States, Canada, or any country subject to international sanctions (including Iran, Cuba, North Korea, Syria, Venezuela, and others).
+              <br />
+              <br />
               By continuing, you confirm that you are not a resident of a restricted jurisdiction and that you comply with your local laws.
             </p>
             <button
@@ -93,7 +95,7 @@ function App() {
                 border: "none",
                 borderRadius: "5px",
                 fontSize: "16px",
-                cursor: "pointer"
+                cursor: "pointer",
               }}
             >
               I Acknowledge & Continue
@@ -107,12 +109,9 @@ function App() {
       </header>
 
       <main className="App-main">
-        {/* Geri sayım sayacını buraya ekleyebilirsiniz */}
         <section className="countdown">
           <CountdownTimer />
         </section>
-
-        {/* Yeni: Sunucu bilgisini gösteren bölüm */}
         <section className="server-info">
           <h2>Server Info</h2>
           {serverTime ? (
@@ -122,11 +121,11 @@ function App() {
           )}
         </section>
         <section className="wallet-section">
-          <h2>wallet connect</h2>
+          <h2>Wallet Connect</h2>
           <WalletConnectButton setProvider={setProvider} setAccount={setAccount} />
         </section>
         <section className="buy-tokens-section">
-          <h2>solium buy</h2>
+          <h2>Solium Buy</h2>
           <BuyTokensForm provider={provider} account={account} />
         </section>
         <section className="contract-info-section">
@@ -148,8 +147,12 @@ function App() {
           </p>
           <h2>Fair. Decentralized. Unstoppable.</h2>
           <ul>
-            <li><strong>Total Supply:</strong> 100,000,000 SLM</li>
-            <li><strong>Presale:</strong> 50,000,000 SLM available now</li>
+            <li>
+              <strong>Total Supply:</strong> 100,000,000 SLM
+            </li>
+            <li>
+              <strong>Presale:</strong> 50,000,000 SLM available now
+            </li>
             <li>
               <strong>BSC Contract Address:</strong>{" "}
               <span className="contract-address">0x307a0dc0814CbD64E81a9BC8517441Ca657fB9c7</span>
@@ -158,41 +161,71 @@ function App() {
               <strong>Solana Contract Address:</strong>{" "}
               <span className="contract-address">9rFLChxL7444pp1ykat7eoaFh76BiLEZNXUvn9Fpump</span>
             </li>
-            <li><strong>No Team Allocation – No Dev Fees – No Private Sale</strong></li>
-            <li><strong>Every token is earned, not given.</strong></li>
+            <li>
+              <strong>No Team Allocation – No Dev Fees – No Private Sale</strong>
+            </li>
+            <li>
+              <strong>Every token is earned, not given.</strong>
+            </li>
           </ul>
           <h2>Why Solium?</h2>
           <ul>
-            <li><strong>100% Public Launch:</strong> No hidden wallets, no early access.</li>
-            <li><strong>Verified Smart Contracts:</strong> Audited & transparent.</li>
-            <li><strong>BNB Chain Powered:</strong> Fast, cheap, and secure.</li>
-            <li><strong>Airdrop, Staking & Gaming:</strong> Built to reward our true believers.</li>
-            <li><strong>Web3 Ready:</strong> Multi-wallet integration, DEX-compatible.</li>
+            <li>
+              <strong>100% Public Launch:</strong> No hidden wallets, no early access.
+            </li>
+            <li>
+              <strong>Verified Smart Contracts:</strong> Audited & transparent.
+            </li>
+            <li>
+              <strong>BNB Chain Powered:</strong> Fast, cheap, and secure.
+            </li>
+            <li>
+              <strong>Airdrop, Staking & Gaming:</strong> Built to reward our true believers.
+            </li>
+            <li>
+              <strong>Web3 Ready:</strong> Multi-wallet integration, DEX-compatible.
+            </li>
           </ul>
           <h2>Solium Coin Roadmap</h2>
           <h3>Q1: Launch & Presale</h3>
           <ul>
-            <li>Token creation and smart contract deployment <strong>(Completed)</strong></li>
-            <li>Website & presale launch <strong>(Completed)</strong></li>
-            <li>GitHub, Medium, X (Twitter), Telegram setup <strong>(Completed)</strong></li>
+            <li>
+              Token creation and smart contract deployment <strong>(Completed)</strong>
+            </li>
+            <li>
+              Website & presale launch <strong>(Completed)</strong>
+            </li>
+            <li>
+              GitHub, Medium, X (Twitter), Telegram setup <strong>(Completed)</strong>
+            </li>
             <li>Initial marketing & community building</li>
             <li>First influencer collaborations</li>
-            <li>Apply for X verification <strong>(Completed)</strong></li>
+            <li>
+              Apply for X verification <strong>(Completed)</strong>
+            </li>
           </ul>
           <h3>Q2: Growth & Visibility</h3>
           <ul>
             <li>DEXTools, CoinGecko, CoinMarketCap listings</li>
-            <li>First CEX listing <strong>(Goal: MEXC or Bitget)</strong></li>
-            <li>Airdrop distribution <strong>(10M SLM)</strong></li>
+            <li>
+              First CEX listing <strong>(Goal: MEXC or Bitget)</strong>
+            </li>
+            <li>
+              Airdrop distribution <strong>(10M SLM)</strong>
+            </li>
             <li>Community engagement campaigns</li>
             <li>Dapp integration for staking</li>
             <li>Second round of targeted advertising</li>
           </ul>
           <h3>Q3: Expansion</h3>
           <ul>
-            <li>Staking launch <strong>(10M SLM allocated)</strong></li>
+            <li>
+              Staking launch <strong>(10M SLM allocated)</strong>
+            </li>
             <li>Partnership announcements</li>
-            <li>Listings on top-tier CEXes <strong>(KuCoin, Binance target)</strong></li>
+            <li>
+              Listings on top-tier CEXes <strong>(KuCoin, Binance target)</strong>
+            </li>
             <li>Solium GameFi concept reveal & development start</li>
             <li>DAO exploration for community governance</li>
             <li>Cross-chain bridge research</li>
